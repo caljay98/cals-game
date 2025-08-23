@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "raylib.h": "c",
+        "world.h": "c",
+        "stdbool.h": "c",
+        "player.h": "c",
+        "triground.h": "c",
+        "raymath.h": "c",
+        "limits.h": "c"
+    }
+}

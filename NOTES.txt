@@ -1,0 +1,56 @@
+TODO:
+ - Make a basic wall and player type
+ - Make player to wall collision code
+ - Make force/movement code
+
+TYPES:
+ - Static Object Type (walls)
+   - Triangle collision
+   - Color
+   - Solid, maybe a mask with different groups
+   - Texture
+ - Player type
+   - Rounded rectangle collision
+     - x, y, width, height, roundness ratio
+   - Needs collision with rectangles and entities
+     - Normal direction of collision (perp to the line of collision)
+   - Velocity
+   - Mass
+   - List of all players touching (for wall touch propogation)
+     - Include collision direction so it does not need to re-compute
+   - Total x and y force for that update cycle
+   - JumpOK bool
+ - Projectile type
+   - circle
+ - Other entity type
+   - Rectangle
+   - Does something on interaction/collision
+   
+GAMEPLAY UPDATE LOOP
+ - Check for input forces
+   - including jumps, if jumpOK
+ - Check projectiles
+   - new projectiles needed (shoot)?
+     - Shooting force applied to player
+   - Any projectile collisions?
+     - do damage to players or entities
+ - Check for other forces (projectile to player forces)
+   - explosions
+ - Check for player-player collisions
+   - Transfer momentum directly (update velocity)
+   - Update player collision list
+ - Check for player-wall collisions
+   - Remove all forces in the direction of the collision
+   - modify momentum by simulating momentum to an object with infinate mass
+   - Propogate out to all players touching (stacked objects)
+   - set jumpOK bool (jump can be activated next cycle)
+     - Jumps should be conditional on the collision direction
+	 - JumpOK should propogate to other players (conditional to collision direction)
+   
+OTHER NOTES:
+ - Use jump, need to calculate if that is OK
+ - Need to put more thought into the grapple logic. Will need to work just like collisions
+ - Make sure to make input handling scalable to multiplayer
+ - Make creative functions for how damage and force from explosions are handled. This will be important for how the game feels
+ - There needs to be a maximum velocity and minimum wall size that are related in some way
+ - Roller skates for the players? Would feel really good
