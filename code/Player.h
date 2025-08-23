@@ -7,6 +7,7 @@
 #include "raylib.h"
 #include "RectGround.h"
 #include "TriGround.h"
+#include "CollisionLib.h"
 
 // *****DEFINES*****
 // TODO default mass, color?
@@ -20,13 +21,6 @@ typedef struct Inputs
     bool jumpInput;
     bool shootInput;
 } Inputs;
-
-typedef struct CollisionInfo
-{
-    Vector2 colPosition;
-    Vector2 surfaceNormal; // a surface normal of (0,0) is no collision
-    float colDepth; // depth should always be negative
-} CollisionInfo;
 
 typedef struct Player
 {
