@@ -4,10 +4,10 @@
 // when ready
 
 // *****INCLUDES*****
-#include <stdio.h>
 #include "raylib.h"
 #include "Player.h"
 #include "World.h"
+#include "DebugLib.h"
 
 // *****DEFINES*****
 #define TARGET_FPS 60
@@ -28,7 +28,7 @@ static void drawGui(void);
 // *****PUBLIC FUNCTIONS*****
 int main(int argc, char** argv)
 {
-    static Camera2D camera = {0};
+    static Camera2D camera = { 0 };
     init(&camera);
 
     while (!WindowShouldClose())
@@ -40,9 +40,12 @@ int main(int argc, char** argv)
             BeginMode2D(camera);
             {
                 DrawWorld(&world);
+                DrawDebugPoints();
+                DrawDebugEdges();
             }
             EndMode2D();
             drawGui();
+            DrawDebugFloatsOnGui();
         }
         EndDrawing();
     }
@@ -58,9 +61,9 @@ static void init(Camera2D* pCamera)
     // TODO better camera init
     pCamera->target.x = 500;
     pCamera->target.y = 250;
-    pCamera->offset = (Vector2){ FRAME_WIDTH/2.0f, FRAME_HEIGHT/2.0f };
+    pCamera->offset = (Vector2){ FRAME_WIDTH / 2.0f, FRAME_HEIGHT / 2.0f };
     pCamera->rotation = 0.0f;
-    pCamera->zoom = 1.5f;
+    pCamera->zoom = 3.0f; // 1.5f
 
     SetTargetFPS(TARGET_FPS);
 
@@ -71,7 +74,7 @@ static void init(Camera2D* pCamera)
     world.rectGroundArray[0].width = 1000;
     world.rectGroundArray[0].height = 80;
     world.rectGroundArray[0].color = BLUE;
-    
+
     world.rectGroundArray[1].position.x = 200;
     world.rectGroundArray[1].position.y = 300;
     world.rectGroundArray[1].width = 200;
@@ -150,8 +153,5 @@ static void updateCamera(Camera2D* pCamera)
 
 static void drawGui(void)
 {
-    char text[255];
-    sprintf(text, "Frame Time: %2.3fms", GetFrameTime()*1000.0f);
-    DrawText(text, 20, 20, 50, BLACK);
-
+    // TODO
 }

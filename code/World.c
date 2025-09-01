@@ -62,7 +62,8 @@ void UpdateWorld(World* pWorld)
     // TODO remove all forces in the direction of the collision (dot product)
     // TODO remove all velocity in the direction of the collision
 
-    // update player positions so there is no overlap from the player to wall or other players
+    // update player positions so there is no overlap from the player to wall or other
+    // players. May need to propogate out
     // TODO
 }
 

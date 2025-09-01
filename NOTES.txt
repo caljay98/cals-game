@@ -48,9 +48,14 @@ GAMEPLAY UPDATE LOOP
 	 - JumpOK should propogate to other players (conditional to collision direction)
    
 OTHER NOTES:
- - Use jump, need to calculate if that is OK
  - Need to put more thought into the grapple logic. Will need to work just like collisions
  - Make sure to make input handling scalable to multiplayer
  - Make creative functions for how damage and force from explosions are handled. This will be important for how the game feels
  - There needs to be a maximum velocity and minimum wall size that are related in some way
  - Roller skates for the players? Would feel really good
+ - Two types of weapons: Energy and physical.
+   - Players have shields that are good at blocking energy weapons, but not physical. When shield is depleted energy weapons are much more effective
+   - shield quickly regens over time, if destroyed it has a cooldown
+   - each class (?) has a mix of energy and physical
+   - energy weapons for movement
+ - See if it is possible to have all depencies in the git folder

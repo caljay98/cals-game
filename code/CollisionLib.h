@@ -23,7 +23,23 @@ typedef struct Projection
 } Projection;
 
 // *****PUBLIC FUNCTION PROTOTYPES*****
-CollisionInfo satCollision(Vector2* aShape1VertexArray, int shape1NumVerteces,
-    Vector2* aShape2VertexArray, int shape2NumVerteces);
+CollisionInfo SatCollisionPolyPoly(Vector2* aShape1VertexArray, int shape1NumVerteces,
+    Vector2* aShape2VertexArray, int shape2NumVerteces, bool (*testFunc)(Vector2));
+CollisionInfo SatCollisionCirclePoly(Vector2 circleCenter, float circleRadius,
+    Vector2* aShape2VertexArray, int shape2NumVerteces, bool (*testFunc)(Vector2));
+
+// directionality contitional checks
+bool sideRectOnly(Vector2 direction);
+bool topBotRectOnly(Vector2 direction);
+// exclusive only takes diagnal vectors
+bool upLeftOnlyExclusive(Vector2 direction);
+bool upRightOnlyExclusive(Vector2 direction);
+bool downLeftOnlyExclusive(Vector2 direction);
+bool downRightOnlyExclusive(Vector2 direction);
+// inclusive counts horizontal and vertical vectors too
+bool upLeftOnlyInclusive(Vector2 direction);
+bool upRightOnlyInclusive(Vector2 direction);
+bool downLeftOnlyInclusive(Vector2 direction);
+bool downRightOnlyInclusive(Vector2 direction);
 
 #endif
