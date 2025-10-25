@@ -4,10 +4,7 @@
 #include "Player.h"
 #include "raymath.h"
 #include <float.h>
-
-// DEBUG
-#include <stdio.h>
-#include "DebugLib.h"
+#include <stdlib.h>
 
 // *****DEFINES*****
 #define NUM_RECT_VERTECIES       (4)
@@ -28,6 +25,7 @@
 // *****PRIVATE VARIABLES*****
 
 // *****PRIVATE FUNCTION PROTOTYPES*****
+static Vector2 findColPointPlayerTriGround(CollisionInfo* pColInfo, Player* pPlayer, TriGround* pTriGound);
 
 // *****PUBLIC FUNCTIONS*****
 void InitPlayer(Player* pPlayer)
@@ -215,13 +213,6 @@ CollisionInfo TouchingRectGround(Player* pPlayer, RectGround* pRectGround)
         }
     }
     // else no collision, leave the retVal zeroed out
-
-    // DEBUG
-    if (retVal.surfaceNormal.x != 0 || retVal.surfaceNormal.y != 0)
-    {
-        printf("retVal.colDepth: %f\n", retVal.colDepth);
-    }
-
     return retVal;
 }
 
@@ -250,28 +241,17 @@ CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround)
     outerBoxColInfo = SatCollisionPolyPoly(rectVertArray, NUM_RECT_VERTECIES,
         pTriGround->verteces, NUM_TRI_VERTECES, NULL);
 
-    // DEBUG
-    if (IsKeyDown(KEY_P))
-    {
-        return outerBoxColInfo;
-    }
 
     // if the outer box is colliding, a more detailed analysis is needed
     if (outerBoxColInfo.surfaceNormal.x != 0 || outerBoxColInfo.surfaceNormal.y != 0)
     {
-        // DEBUG
-        printf("\nNEW COLLISION TO TEST\n");
-        gShowDebugFloat[1] = true;
-
-        // TODO need to make sure the collision location is in the correct spot
-
         // break the rounded rectangle into 6 shapes (maybe less depending on corner
         // radius). Check each shape using SAT and find the maximum depth where the
         // shapes are still touching. This will be the normal and depth we will use.
         // This may deturmine the player and triangle are not touching
 
         // wide box
-        if (sideRectOnly(outerBoxColInfo.surfaceNormal))
+        if (SideRectOnly(outerBoxColInfo.surfaceNormal))
         {
             rectVertArray[0].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f); // top left
             rectVertArray[0].y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f) + PLAYER_ROUNDED_RADIUS;
@@ -282,26 +262,17 @@ CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround)
             rectVertArray[3].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f); // bottom left
             rectVertArray[3].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f) - PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionPolyPoly(rectVertArray, NUM_RECT_VERTECIES,
-                pTriGround->verteces, NUM_TRI_VERTECES, &sideRectOnly);
+                pTriGround->verteces, NUM_TRI_VERTECES, &SideRectOnly);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
                 centerRectTouching = true;
-
-                // DEBUG
-                gDebugFloat[1] = 0;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  wide box depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
         }
 
         // tall box
-        if (topBotRectOnly(outerBoxColInfo.surfaceNormal))
+        if (TopBotRectOnly(outerBoxColInfo.surfaceNormal))
         {
             rectVertArray[0].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f) + PLAYER_ROUNDED_RADIUS; // top left
             rectVertArray[0].y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f);
@@ -312,136 +283,73 @@ CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround)
             rectVertArray[3].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f) + PLAYER_ROUNDED_RADIUS; // bottom left
             rectVertArray[3].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f);
             tempColInfo = SatCollisionPolyPoly(rectVertArray, NUM_RECT_VERTECIES,
-                pTriGround->verteces, NUM_TRI_VERTECES, &topBotRectOnly);
+                pTriGround->verteces, NUM_TRI_VERTECES, &TopBotRectOnly);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
                 centerRectTouching = true;
-
-                // DEBUG
-                gDebugFloat[1] = 1;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  tall box depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
         }
 
         // top left corner circle
-        if ((centerRectTouching && downRightOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
-            (!centerRectTouching && downRightOnlyInclusive(outerBoxColInfo.surfaceNormal)))
+        if ((centerRectTouching && DownRightOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
+            (!centerRectTouching && DownRightOnlyInclusive(outerBoxColInfo.surfaceNormal)))
         {
-            // DEBUG
-            gDebugFloat[0] = 2;
-
             cornerCirclePos.x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f) + PLAYER_ROUNDED_RADIUS;
             cornerCirclePos.y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f) + PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionCirclePoly(cornerCirclePos, PLAYER_ROUNDED_RADIUS,
-                pTriGround->verteces, NUM_TRI_VERTECES, &downRightOnlyInclusive);
+                pTriGround->verteces, NUM_TRI_VERTECES, &DownRightOnlyInclusive);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 2;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  TL circle depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
         }
 
         // top right corner circle
-        if ((centerRectTouching && downLeftOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
-            (!centerRectTouching && downLeftOnlyInclusive(outerBoxColInfo.surfaceNormal)))
+        if ((centerRectTouching && DownLeftOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
+            (!centerRectTouching && DownLeftOnlyInclusive(outerBoxColInfo.surfaceNormal)))
         {
-            // DEBUG
-            gDebugFloat[0] = 3;
-
             cornerCirclePos.x = pPlayer->position.x + (PLAYER_WIDTH / 2.0f) - PLAYER_ROUNDED_RADIUS;
             cornerCirclePos.y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f) + PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionCirclePoly(cornerCirclePos, PLAYER_ROUNDED_RADIUS,
-                pTriGround->verteces, NUM_TRI_VERTECES, &downLeftOnlyInclusive);
+                pTriGround->verteces, NUM_TRI_VERTECES, &DownLeftOnlyInclusive);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 3;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  TR circle depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
         }
 
         // bottom right corner circle
-        if ((centerRectTouching && upLeftOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
-            (!centerRectTouching && upLeftOnlyInclusive(outerBoxColInfo.surfaceNormal)))
+        if ((centerRectTouching && UpLeftOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
+            (!centerRectTouching && UpLeftOnlyInclusive(outerBoxColInfo.surfaceNormal)))
         {
-            // DEBUG
-            gDebugFloat[0] = 4;
-
             cornerCirclePos.x = pPlayer->position.x + (PLAYER_WIDTH / 2.0f) - PLAYER_ROUNDED_RADIUS;
             cornerCirclePos.y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f) - PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionCirclePoly(cornerCirclePos, PLAYER_ROUNDED_RADIUS,
-                pTriGround->verteces, NUM_TRI_VERTECES, &upLeftOnlyInclusive);
+                pTriGround->verteces, NUM_TRI_VERTECES, &UpLeftOnlyInclusive);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 4;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  BR circle depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
         }
 
         // bottom left corner circle
-        if ((centerRectTouching && upRightOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
-            (!centerRectTouching && upRightOnlyInclusive(outerBoxColInfo.surfaceNormal)))
+        if ((centerRectTouching && UpRightOnlyExclusive(outerBoxColInfo.surfaceNormal)) ||
+            (!centerRectTouching && UpRightOnlyInclusive(outerBoxColInfo.surfaceNormal)))
         {
-            // DEBUG
-            gDebugFloat[0] = 5;
-
             cornerCirclePos.x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f) + PLAYER_ROUNDED_RADIUS;
             cornerCirclePos.y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f) - PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionCirclePoly(cornerCirclePos, PLAYER_ROUNDED_RADIUS,
-                pTriGround->verteces, NUM_TRI_VERTECES, &upRightOnlyInclusive);
+                pTriGround->verteces, NUM_TRI_VERTECES, &UpRightOnlyInclusive);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth < retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 5;
             }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  BL circle depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
-            }
-        }
-
-        // DEBUG
-        if (retVal.surfaceNormal.x != 0 || retVal.surfaceNormal.y != 0)
-        {
-            printf("retVal.colDepth: %f\n", retVal.colDepth);
         }
 
         // if none of the corner circles are colliding, double check that neither middle
@@ -463,20 +371,11 @@ CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround)
             rectVertArray[3].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f); // bottom left
             rectVertArray[3].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f) - PLAYER_ROUNDED_RADIUS;
             tempColInfo = SatCollisionPolyPoly(rectVertArray, NUM_RECT_VERTECIES,
-                pTriGround->verteces, NUM_TRI_VERTECES, &sideRectOnly);
+                pTriGround->verteces, NUM_TRI_VERTECES, &SideRectOnly);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth > retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 0;
-            }
-
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  wide box depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
             }
 
             // tall box
@@ -489,21 +388,18 @@ CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround)
             rectVertArray[3].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f) + PLAYER_ROUNDED_RADIUS; // bottom left
             rectVertArray[3].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f);
             tempColInfo = SatCollisionPolyPoly(rectVertArray, NUM_RECT_VERTECIES,
-                pTriGround->verteces, NUM_TRI_VERTECES, &topBotRectOnly);
+                pTriGround->verteces, NUM_TRI_VERTECES, &TopBotRectOnly);
             if ((tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0) &&
                 tempColInfo.colDepth > retVal.colDepth)
             {
                 retVal = tempColInfo;
-
-                // DEBUG
-                gDebugFloat[1] = 1;
             }
+        }
 
-            // DEBUG
-            if (tempColInfo.surfaceNormal.x != 0 || tempColInfo.surfaceNormal.y != 0)
-            {
-                printf("  tall box depth: %f, (%f, %f)\n", tempColInfo.colDepth, tempColInfo.surfaceNormal.x, tempColInfo.surfaceNormal.y);
-            }
+        // find the correct point for the collision if there is one
+        if (retVal.surfaceNormal.x != 0 || retVal.surfaceNormal.y != 0)
+        {
+            retVal.colPosition = findColPointPlayerTriGround(&retVal, pPlayer, pTriGround);
         }
     }
 
@@ -566,3 +462,90 @@ void DrawPlayer(Player* pPlayer)
 
 // *****PRIVATE FUNCTIONS*****
 
+static Vector2 findColPointPlayerTriGround(CollisionInfo* pColInfo, Player* pPlayer, TriGround* pTriGound)
+{
+    // use the player bounding box to find the location of the collision
+    Vector2 retVal; // return the collision point
+    Vector2 rectVertArray[NUM_RECT_VERTECIES];
+    Vector2 triEdge1[2]; // the first triangle edge detected
+    int triEdgeIndex;
+    Vector2 colPoint1; // the first collision point detected
+    Vector2 tempVec;
+    int numCollisions = 0;
+
+    rectVertArray[0].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f); // top left
+    rectVertArray[0].y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f);
+    rectVertArray[1].x = pPlayer->position.x + (PLAYER_WIDTH / 2.0f); // top right
+    rectVertArray[1].y = pPlayer->position.y - (PLAYER_HEIGHT / 2.0f);
+    rectVertArray[2].x = pPlayer->position.x + (PLAYER_WIDTH / 2.0f); // bottom right
+    rectVertArray[2].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f);
+    rectVertArray[3].x = pPlayer->position.x - (PLAYER_WIDTH / 2.0f); // bottom left
+    rectVertArray[3].y = pPlayer->position.y + (PLAYER_HEIGHT / 2.0f);
+
+    // run through the edge collision options
+    for (int k = 0; k < NUM_TRI_VERTECES; k++)
+    {
+        for (int c = 0; c < NUM_RECT_VERTECIES; c++)
+        {
+            if (CheckCollisionLines(
+                pTriGound->verteces[k],
+                pTriGound->verteces[(k + 1) % NUM_TRI_VERTECES],
+                rectVertArray[c],
+                rectVertArray[(c + 1) % NUM_RECT_VERTECIES],
+                &tempVec))
+            {
+                // these two edges are colliding
+                if (numCollisions == 0)
+                {
+                    // this is the first collision. Save what triangle edge was touching
+                    numCollisions++;
+                    triEdge1[0] = pTriGound->verteces[k];
+                    triEdge1[1] = pTriGound->verteces[(k + 1) % NUM_TRI_VERTECES];
+                    triEdgeIndex = k;
+                    colPoint1 = tempVec;
+                }
+                else
+                {
+                    // this is the second collision. Check if it was the same tri edge
+                    if (k == triEdgeIndex)
+                    {
+                        // this was the same triEdge. The collision point is the average of the
+                        // two collision points
+                        retVal.x = (colPoint1.x + tempVec.x) / 2;
+                        retVal.y = (colPoint1.y + tempVec.y) / 2;
+                        return retVal;
+                    }
+                    else
+                    {
+                        // this is a different triEdge. The collision point is the common vertex
+                        // between the two edges
+                        if ((triEdge1[0].x == pTriGound->verteces[k].x &&
+                            triEdge1[0].y == pTriGound->verteces[k].y) ||
+                            (triEdge1[0].x == pTriGound->verteces[(k + 1) % NUM_TRI_VERTECES].x &&
+                                triEdge1[0].y == pTriGound->verteces[(k + 1) % NUM_TRI_VERTECES].y))
+                        {
+                            return triEdge1[0];
+                        }
+                        else
+                        {
+                            return triEdge1[1];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // these 2 cases should never be hit, but handle them anyway
+    if (numCollisions == 1)
+    {
+        retVal = colPoint1;
+    }
+    else
+    {
+        // final fallback
+        retVal = pColInfo->colPosition;
+    }
+
+    return retVal;
+}

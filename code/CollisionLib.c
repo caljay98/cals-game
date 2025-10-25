@@ -5,9 +5,6 @@
 #include "raymath.h"
 #include <float.h>
 
-// DEBUG
-#include "DebugLib.h"
-
 // *****DEFINES*****
 
 // *****TYPEDEFS*****
@@ -142,10 +139,6 @@ CollisionInfo SatCollisionCirclePoly(Vector2 circleCenter, float circleRadius,
             retVal.surfaceNormal.x = 0;
             retVal.surfaceNormal.y = 0;
 
-            // DEBUG
-            gShowDebugPoints[(int)gDebugFloat[0]] = false;
-            gShowDebugEdges[(int)gDebugFloat[0]] = false;
-
             return retVal;
         }
         else
@@ -190,13 +183,6 @@ CollisionInfo SatCollisionCirclePoly(Vector2 circleCenter, float circleRadius,
     testEdge[0] = Vector2Add(tangentPoint, perpVector);
     testEdge[1] = Vector2Subtract(tangentPoint, perpVector);
 
-    // DEBUG
-    gDebugPoints[(int)gDebugFloat[0]] = tangentPoint;
-    gDebugEdges[(int)gDebugFloat[0]][0] = testEdge[0];
-    gDebugEdges[(int)gDebugFloat[0]][1] = testEdge[1];
-    gShowDebugPoints[(int)gDebugFloat[0]] = true;
-    gShowDebugEdges[(int)gDebugFloat[0]] = true;
-
     // test this generated edge for collision
     projColInfo = checkProjectionCollisionCirclePoly(testEdge,
         circleCenter, circleRadius, aShape2VertexArray, shape2NumVerteces);
@@ -229,61 +215,61 @@ CollisionInfo SatCollisionCirclePoly(Vector2 circleCenter, float circleRadius,
 
 // directionality contitional checks
 
-bool sideRectOnly(Vector2 direction)
+bool SideRectOnly(Vector2 direction)
 {
     // used for rectangle collision, only the sides should be counted
     return (direction.x != 0 && direction.y == 0);
 }
 
-bool topBotRectOnly(Vector2 direction)
+bool TopBotRectOnly(Vector2 direction)
 {
     // used for rectangle collision, only the top and bottom should be counted
     return (direction.x == 0 && direction.y != 0);
 }
 
-bool upLeftOnlyExclusive(Vector2 direction)
+bool UpLeftOnlyExclusive(Vector2 direction)
 {
     // vector going up and to the left
     return (direction.x < 0 && direction.y < 0);
 }
 
-bool upRightOnlyExclusive(Vector2 direction)
+bool UpRightOnlyExclusive(Vector2 direction)
 {
     // vector going up and to the right
     return (direction.x > 0 && direction.y < 0);
 }
 
-bool downLeftOnlyExclusive(Vector2 direction)
+bool DownLeftOnlyExclusive(Vector2 direction)
 {
     // vector going down and to the left
     return (direction.x < 0 && direction.y > 0);
 }
 
-bool downRightOnlyExclusive(Vector2 direction)
+bool DownRightOnlyExclusive(Vector2 direction)
 {
     // vector going down and to the right
     return (direction.x > 0 && direction.y > 0);
 }
 
-bool upLeftOnlyInclusive(Vector2 direction)
+bool UpLeftOnlyInclusive(Vector2 direction)
 {
     // vector going up and to the left
     return (direction.x <= 0 && direction.y <= 0);
 }
 
-bool upRightOnlyInclusive(Vector2 direction)
+bool UpRightOnlyInclusive(Vector2 direction)
 {
     // vector going up and to the right
     return (direction.x >= 0 && direction.y <= 0);
 }
 
-bool downLeftOnlyInclusive(Vector2 direction)
+bool DownLeftOnlyInclusive(Vector2 direction)
 {
     // vector going down and to the left
     return (direction.x <= 0 && direction.y >= 0);
 }
 
-bool downRightOnlyInclusive(Vector2 direction)
+bool DownRightOnlyInclusive(Vector2 direction)
 {
     // vector going down and to the right
     return (direction.x >= 0 && direction.y >= 0);
