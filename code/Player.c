@@ -6,13 +6,16 @@
 #include <float.h>
 #include <stdlib.h>
 
+// DEBUG
+#include "DebugLib.h"
+
 // *****DEFINES*****
+// shape defines
 #define NUM_RECT_VERTECIES       (4)
 #define MAX_POLYGON_VERTECIES    (4) // increase this if we need to support more complex polygons
 #define PLAYER_WIDTH             (40.0f)
 #define PLAYER_HEIGHT            (90.0f)
-#define PLAYER_ROUNDED_RADIUS    (10.0f) // must be <= 0.5*PLAYER_WIDTH
-//#define PLAYER_ROUNDED_RADIUS    (20.0f) // probably best, tuning needed
+#define PLAYER_ROUNDED_RADIUS    (20.0f) // must be <= 0.5*PLAYER_WIDTH
 
 // vector drawing defines
 #define COLLISION_INFO_COLOR     (ORANGE)
@@ -20,12 +23,27 @@
 #define COLLISION_INFO_THICKNESS (4.0f)
 #define COLLISION_INFO_RADIUS    (5.0f)
 
+// movement defines
+#define PLAYER_ACCEL_GROUND      (1.0f) // ground acceleration per frame
+#define PLAYER_ACCEL_AIR         (1.0f) // air acceleration per frame
+#define PLAYER_FRICTION_GROUND   (0.99f) // fraction of velocity preserved each frame on ground
+#define PLAYER_FRICTION_AIR      (0.99f) // fraction of velocity preserved each frame in air
+#define PLAYER_JUMP_FORCE        (-50.0f) // initial jump impulse speed
+#define PLAYER_JUMP_HOLD_FORCE   (-25.0f) // extra force applied each jump-hold frame
+#define PLAYER_MAX_HOLD_FRAMES   (8) // number of frames jump can be held
+#define GRAVITY_Y                (2.2f) // downward acceleration (positive Y)
+// TODO may want to add some max speed defines
+
 // *****TYPEDEFS*****
 
 // *****PRIVATE VARIABLES*****
 
 // *****PRIVATE FUNCTION PROTOTYPES*****
 static Vector2 findColPointPlayerTriGround(CollisionInfo* pColInfo, Player* pPlayer, TriGround* pTriGound);
+static Vector2 calcGroundTangent(Vector2 normal);
+static float slopeSpeedScale(Vector2 normal);
+static Vector2 groundFrictionForce(Player* p, Vector2 tangent);
+static Vector2 airFrictionForce(Player* p);
 
 // *****PUBLIC FUNCTIONS*****
 void InitPlayer(Player* pPlayer)
@@ -415,6 +433,94 @@ CollisionInfo TouchingPlayer(Player* pPlayer1, Player* pPlayer2)
     return retVal;
 }
 
+void CalcInputsAndWorldForces(Player* pPlayer)
+{
+    Inputs* pInputs = &pPlayer->inputs;
+    float moveInput = (pInputs->rightInput ? 1.0f : 0.0f) - (pInputs->leftInput ? 1.0f : 0.0f);
+
+    // reset accumulated forces
+    pPlayer->forces = (Vector2){ 0, 0 };
+
+    if ((pPlayer->groundedNormal.x != 0.0f || pPlayer->groundedNormal.y != 0.0f))
+    {
+        // DEBUG
+        gDebugFloat[4] = 1.0;
+
+        // --- GROUND MOVEMENT ---
+        Vector2 tangent = calcGroundTangent(pPlayer->groundedNormal);
+        pPlayer->jumpFramesRemaining = PLAYER_MAX_HOLD_FRAMES;
+
+        // Movement force along ground tangent
+        if (moveInput != 0.0f)
+        {
+            float slopeScale = slopeSpeedScale(pPlayer->groundedNormal);
+            Vector2 moveForce = Vector2Scale(tangent, moveInput * PLAYER_ACCEL_GROUND * slopeScale);
+            pPlayer->forces = Vector2Subtract(pPlayer->forces, moveForce);
+        }
+
+        // Friction
+        Vector2 frictionForce = groundFrictionForce(pPlayer, tangent);
+        pPlayer->forces = Vector2Add(pPlayer->forces, frictionForce);
+
+        // Jump
+        if (pInputs->jumpInput && pPlayer->jumpFramesRemaining > 0)
+        {
+            // TODO modify so that the player can have a reduced jump strait up
+            // (no direction or opposite direction of slope) or a full jump in the
+            // direction of the ground normal
+
+            Vector2 jumpForce = Vector2Scale(pPlayer->groundedNormal, -PLAYER_JUMP_FORCE);
+            pPlayer->forces = Vector2Add(pPlayer->forces, jumpForce);
+            pPlayer->jumpFramesRemaining--;
+        }
+    }
+    else
+    {
+        // DEBUG
+        gDebugFloat[4] = 0.0;
+
+        // --- AIR MOVEMENT ---
+        if (!pInputs->jumpInput || pPlayer->jumpFramesRemaining == PLAYER_MAX_HOLD_FRAMES)
+        {
+            pPlayer->jumpFramesRemaining = 0;
+        }
+
+        if (moveInput != 0.0f)
+        {
+            Vector2 moveForce = { moveInput * PLAYER_ACCEL_AIR, 0.0f };
+            pPlayer->forces = Vector2Add(pPlayer->forces, moveForce);
+        }
+
+        // Gravity (acts downward)
+        pPlayer->forces.y += GRAVITY_Y;
+
+        // Air friction
+        Vector2 drag = airFrictionForce(pPlayer);
+        pPlayer->forces = Vector2Add(pPlayer->forces, drag);
+
+        // Jump-hold force (upwards)
+        if (pInputs->jumpInput && pPlayer->jumpFramesRemaining > 0)
+        {
+            // TODO need to save the jump normal so the extra jump frames still are pointed
+            // in the same direction as the original jump
+            pPlayer->forces.y += PLAYER_JUMP_HOLD_FORCE;
+            pPlayer->jumpFramesRemaining--;
+        }
+    }
+
+    // DEBUG
+    gShowDebugFloat[0] = true;
+    gShowDebugFloat[1] = true;
+    gShowDebugFloat[2] = true;
+    gShowDebugFloat[3] = true;
+    gShowDebugFloat[4] = true;
+    gDebugFloat[0] = pPlayer->forces.x;
+    gDebugFloat[1] = pPlayer->forces.y;
+    gDebugFloat[2] = pPlayer->velocity.x;
+    gDebugFloat[3] = pPlayer->velocity.y;
+
+}
+
 void DrawPlayer(Player* pPlayer)
 {
     // tall rectangle
@@ -549,3 +655,36 @@ static Vector2 findColPointPlayerTriGround(CollisionInfo* pColInfo, Player* pPla
 
     return retVal;
 }
+
+// Tangent to a ground normal (points "rightward" along slope)
+static Vector2 calcGroundTangent(Vector2 normal)
+{
+    Vector2 tangent = (Vector2){ normal.y, -normal.x };
+    return Vector2Normalize(tangent);
+}
+
+// Scales ground movement by slope angle (flatter = faster)
+static float slopeSpeedScale(Vector2 normal)
+{
+    // When ground is flat (normal = (0, -1)), dot = 1 → full speed.
+    // When near vertical wall, dot = 0 → no movement.
+    float speedScaler = fabsf(Vector2DotProduct(normal, (Vector2) { 0, -1 }));
+    return speedScaler;
+}
+
+// Apply ground friction as a force opposing tangential velocity
+static Vector2 groundFrictionForce(Player* p, Vector2 tangent)
+{
+    float tangentVel = Vector2DotProduct(p->velocity, tangent);
+    Vector2 friction = Vector2Scale(tangent, -tangentVel * PLAYER_FRICTION_GROUND);
+    return friction;
+}
+
+// Apply air drag as a force opposing velocity
+static Vector2 airFrictionForce(Player* p)
+{
+    return Vector2Scale(p->velocity, -PLAYER_FRICTION_AIR);
+}
+
+
+// End of Player.c

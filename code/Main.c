@@ -63,7 +63,7 @@ static void init(Camera2D* pCamera)
     pCamera->target.y = 250;
     pCamera->offset = (Vector2){ FRAME_WIDTH / 2.0f, FRAME_HEIGHT / 2.0f };
     pCamera->rotation = 0.0f;
-    pCamera->zoom = 3.0f; // 1.5f
+    pCamera->zoom = 1.5f; // 1.5f
 
     SetTargetFPS(TARGET_FPS);
 

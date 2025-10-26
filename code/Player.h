@@ -12,6 +12,7 @@
 // *****DEFINES*****
 // TODO default mass, color?
 #define MAX_GROUND_COLLISIONS (16) // some limit to the number of collisions to store
+#define STANDABLE_GND_Y_THRESH   (-0.7f) // ~45deg
 
 // *****TYPEDEFS*****
 typedef struct Inputs
@@ -28,10 +29,14 @@ typedef struct Player
     Vector2 velocity;
     Vector2 forces;
     float mass;
+
+    // movement helpers
+    int jumpFramesRemaining;
     
     // array for grounds that are being touched
     CollisionInfo groundsTouchedArray[MAX_GROUND_COLLISIONS];
     int numGroundsTouched;
+    Vector2 groundedNormal; // normal for "feet touching ground" direction. (0, 0) is ungrounded
 
     // TODO other players that are colliding and the directions for ground propogation
 
@@ -44,6 +49,7 @@ void UpdatePlayerInput(Player* player);
 CollisionInfo TouchingRectGround(Player* pPlayer, RectGround* pRectGround);
 CollisionInfo TouchingTriGround(Player* pPlayer, TriGround* pTriGround);
 CollisionInfo TouchingPlayer(Player* pPlayer1, Player* pPlayer2);
+void CalcInputsAndWorldForces(Player* pPlayer);
 void DrawPlayer(Player* player);
 
 #endif
